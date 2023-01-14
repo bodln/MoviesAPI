@@ -67,6 +67,41 @@ namespace MoviesAPI.Controllers
             return landingPageDTO;
         }
 
+        [HttpGet("filter")]
+        public async Task<ActionResult<List<MovieDTO>>> Filter([FromQuery] FilterMoviesDTO filterMoviesDTO)
+        {
+            var moviesQueryable = context.Movie.AsQueryable();
+
+            if (!string.IsNullOrEmpty(filterMoviesDTO.Title))
+            {
+                moviesQueryable = moviesQueryable.Where(x => x.Title.Contains(filterMoviesDTO.Title));
+            }
+
+            if (filterMoviesDTO.InTheaters)
+            {
+                moviesQueryable = moviesQueryable.Where(x => x.InTheaters);
+            }
+
+            if (filterMoviesDTO.UpcomingReleases)
+            {
+                var today = DateTime.Today;
+                moviesQueryable = moviesQueryable.Where(x => x.ReleaseDate > today);
+            }
+
+            if (filterMoviesDTO.GenreId != 0)
+            {
+                moviesQueryable = moviesQueryable
+                    .Where(x => x.MoviesGenres.Select(y => y.GenreId)
+                    .Contains(filterMoviesDTO.GenreId));
+            }
+
+            await HttpContext.InsertParametersPaginationInHeader(moviesQueryable);
+            var movies = await moviesQueryable.OrderBy(x => x.Title).Paginate(filterMoviesDTO.PaginationDTO)
+                .ToListAsync();
+
+            return mapper.Map<List<MovieDTO>>(movies);
+        }
+
         [HttpGet("PostGet")]
         public async Task<ActionResult<MoviePostGetDTO>> PostGet()
         {
@@ -95,7 +130,7 @@ namespace MoviesAPI.Controllers
             return movie.Id;
         }
 
-        [HttpGet("{Id:int}")]
+        [HttpGet("PutGet/{Id:int}")]
         public async Task<ActionResult<MoviePutGetDTO>> PutGet(int Id)
         {
             var movieActionResult = await Get(Id);
@@ -151,6 +186,22 @@ namespace MoviesAPI.Controllers
             return NoContent();
         }
 
+        [HttpDelete("{Id:int}")]
+        public async Task<ActionResult> Delete(int Id)
+        {
+            var movie = await context.Movie.FirstOrDefaultAsync(x => x.Id == Id);
+
+            if (movie == null)
+            {
+                return NotFound();
+            }
+
+            context.Remove(movie);
+            await context.SaveChangesAsync();
+            await fileStorageService.DeleteFile(movie.Poster, container);
+            return NoContent();
+        }
+
         private void AnnoteActorOrder(Movie movie)
         {
             if (movie.MoviesActors != null)
@@ -162,6 +213,4 @@ namespace MoviesAPI.Controllers
             }
         }
     }
-
-    
 }
