@@ -13,7 +13,8 @@ namespace MoviesAPI.Controllers
 {
     [Route("api/genres")]
     [ApiController]
-    public class GenresController: ControllerBase
+    //[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Policy = "IsAdmin")]
+    public class GenresController : ControllerBase
     {
         private readonly ILogger<GenresController> logger;
         private readonly ApplicationDBContext context;
@@ -36,6 +37,7 @@ namespace MoviesAPI.Controllers
         }
 
         [HttpGet("all")]
+        //[AllowAnonymous]
         public async Task<ActionResult<List<GenreDTO>>> Get()
         {
             var genres = await context.Genres.OrderBy(x => x.Name).ToListAsync();

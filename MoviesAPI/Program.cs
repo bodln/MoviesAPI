@@ -10,11 +10,14 @@ using MoviesAPI.Helpers;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
 using System.Configuration;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 var _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.Development.json").Build();
 
 var builder = WebApplication.CreateBuilder(args);
+
+//DefaultInboundClaimTypeMap.Clear(); // <-------------------------------- possible jam
 
 // Add services to the container.
 
@@ -71,6 +74,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
     });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("IsAdmin", policy => policy.RequireClaim("role", "admin"));
+});
 
 var app = builder.Build();
 
